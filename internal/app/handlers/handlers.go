@@ -39,7 +39,9 @@ func PostSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json, err := jsonMarshal(PostSignUpResponse{UserID: "1"})
+	userID, _ := createNewUser(r.Context(), user)
+
+	json, err := jsonMarshal(PostSignUpResponse{UserID: userID})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -74,6 +76,10 @@ func GetUserDebt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(debtJson)
+}
+
+func createNewUser(ctx context.Context, user *models.User) (string, error) {
+	return "1", nil
 }
 
 func getUserIDFromHeader(ctx context.Context, h http.Header) (string, error) {

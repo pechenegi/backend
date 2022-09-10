@@ -48,8 +48,9 @@ func TestSignUpUser(t *testing.T) {
 		).Times(1).Return(nil)
 		gomock.InOrder(count, create)
 
-		err := svc.SignUpUser(context.Background(), user)
+		id, err := svc.SignUpUser(context.Background(), user)
 		assert.NoError(t, err)
+		assert.NotEmpty(t, id)
 	})
 
 	t.Run("user already exists", func(t *testing.T) {
@@ -60,8 +61,9 @@ func TestSignUpUser(t *testing.T) {
 			gomock.Eq(user.Login),
 		).Times(1).Return(1, nil)
 
-		err := svc.SignUpUser(context.Background(), user)
+		id, err := svc.SignUpUser(context.Background(), user)
 		assert.ErrorIs(t, err, ErrUserExists)
+		assert.Empty(t, id)
 	})
 
 	t.Run("error while counting", func(t *testing.T) {
@@ -72,9 +74,10 @@ func TestSignUpUser(t *testing.T) {
 			gomock.Eq(user.Login),
 		).Times(1).Return(-1, errors.New("some err"))
 
-		err := svc.SignUpUser(context.Background(), user)
+		id, err := svc.SignUpUser(context.Background(), user)
 		assert.Error(t, err)
 		assert.NotEqual(t, ErrUserExists, err)
+		assert.Empty(t, id)
 	})
 
 	t.Run("error while creating", func(t *testing.T) {
@@ -94,9 +97,10 @@ func TestSignUpUser(t *testing.T) {
 		).Times(1).Return(errors.New("some err"))
 		gomock.InOrder(count, create)
 
-		err := svc.SignUpUser(context.Background(), user)
+		id, err := svc.SignUpUser(context.Background(), user)
 		assert.Error(t, err)
 		assert.NotEqual(t, ErrUserExists, err)
+		assert.Empty(t, id)
 	})
 }
 

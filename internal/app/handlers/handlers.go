@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pechenegi/backend/internal/pkg/models"
+	r "github.com/pechenegi/backend/internal/app/repository"
+	s "github.com/pechenegi/backend/internal/app/service"
+	m "github.com/pechenegi/backend/internal/pkg/models"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -17,7 +20,26 @@ var (
 	jsonUnmarshal = json.Unmarshal
 )
 
-func PostSignUp(w http.ResponseWriter, r *http.Request) {
+type Handlers interface {
+	PostSignUp(w http.ResponseWriter, r *http.Request)
+	GetUserDebt(w http.ResponseWriter, r *http.Request)
+}
+
+type handlers struct {
+	logger   zerolog.Logger
+	userRepo r.UserRepository
+	svc      s.Service
+}
+
+func InitHandlers(ctx context.Context, logger zerolog.Logger, userRepo r.UserRepository, svc s.Service) (Handlers, error) {
+	return &handlers{
+		logger:   logger,
+		userRepo: userRepo,
+		svc:      svc,
+	}, nil
+}
+
+func (h *handlers) PostSignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		http.Error(
 			w,
@@ -33,7 +55,7 @@ func PostSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	user := new(models.User)
+	user := new(m.User)
 	if err := jsonUnmarshal(body, user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -51,7 +73,7 @@ func PostSignUp(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-func GetUserDebt(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) GetUserDebt(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserIDFromHeader(r.Context(), r.Header)
 	if err != nil {
 		if err.Error() == "no user-id was provided" {
@@ -78,7 +100,7 @@ func GetUserDebt(w http.ResponseWriter, r *http.Request) {
 	w.Write(debtJson)
 }
 
-func createNewUser(ctx context.Context, user *models.User) (string, error) {
+func createNewUser(ctx context.Context, user *m.User) (string, error) {
 	return "1", nil
 }
 
@@ -90,9 +112,9 @@ func getUserIDFromHeader(ctx context.Context, h http.Header) (string, error) {
 	return userID, nil
 }
 
-func getUserDebtFromRepository(ctx context.Context, userID string) (*models.DebtInfo, error) {
+func getUserDebtFromRepository(ctx context.Context, userID string) (*m.DebtInfo, error) {
 	if userID == "1" {
-		return &models.DebtInfo{
+		return &m.DebtInfo{
 			ID:               1,
 			StartDate:        time.Date(2021, time.March, 9, 0, 0, 0, 0, time.Local),
 			ContractDuration: 3,

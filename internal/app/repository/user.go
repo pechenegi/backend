@@ -8,24 +8,24 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Repository interface {
+type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	CountUsersByLogin(ctx context.Context, login string) (int, error)
 }
 
-type repository struct {
+type userRepository struct {
 	db     *sql.DB
 	logger zerolog.Logger
 }
 
-func InitRepository(ctx context.Context, logger zerolog.Logger) (Repository, error) {
-	return &repository{
+func InitUserRepository(ctx context.Context, logger zerolog.Logger) (UserRepository, error) {
+	return &userRepository{
 		db:     &sql.DB{},
 		logger: logger,
 	}, nil
 }
 
-func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
+func (r *userRepository) CreateUser(ctx context.Context, user *models.User) error {
 	r.logger.Debug().Str("id", user.ID).Str("login", user.Login).
 		Msg("inserting new user in the database")
 
@@ -46,7 +46,7 @@ func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (r *repository) CountUsersByLogin(ctx context.Context, login string) (int, error) {
+func (r *userRepository) CountUsersByLogin(ctx context.Context, login string) (int, error) {
 	r.logger.Debug().Str("login", login).
 		Msg("counting users with provided login")
 

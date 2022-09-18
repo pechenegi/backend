@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitRepository(t *testing.T) {
+func TestInitUserRepository(t *testing.T) {
 	l := createLogger()
-	repo, err := InitRepository(context.Background(), l)
+	repo, err := InitUserRepository(context.Background(), l)
 	assert.NoError(t, err)
 	assert.NotNil(t, repo)
 }
@@ -109,13 +109,13 @@ func createLogger() zerolog.Logger {
 	return zerolog.New(output).With().Timestamp().Logger()
 }
 
-func createRepo() (*repository, sqlmock.Sqlmock, error) {
+func createRepo() (*userRepository, sqlmock.Sqlmock, error) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		return nil, nil, err
 	}
 	l := createLogger()
-	return &repository{
+	return &userRepository{
 		db:     db,
 		logger: l,
 	}, mock, nil

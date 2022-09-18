@@ -17,7 +17,7 @@ import (
 
 func TestInitService(t *testing.T) {
 	l := createLogger()
-	r, err := r.InitRepository(context.Background(), l)
+	r, err := r.InitUserRepository(context.Background(), l)
 	require.NoError(t, err)
 
 	svc, err := InitService(l, r)
@@ -112,11 +112,11 @@ func createLogger() zerolog.Logger {
 	return zerolog.New(output).With().Timestamp().Logger()
 }
 
-func createService(ctrl *gomock.Controller) (*service, *mocks.MockRepository) {
-	rMock := mocks.NewMockRepository(ctrl)
+func createService(ctrl *gomock.Controller) (*service, *mocks.MockUserRepository) {
+	rMock := mocks.NewMockUserRepository(ctrl)
 	l := createLogger()
 	return &service{
-		logger: l,
-		repo:   rMock,
+		logger:   l,
+		userRepo: rMock,
 	}, rMock
 }

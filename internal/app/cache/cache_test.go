@@ -74,7 +74,7 @@ func TestAddDebtStats(t *testing.T) {
 		stats := generateStats()
 		stats.CalculatedAt = stats.CalculatedAt.Add(-1 * 24 * time.Hour)
 		err := c.AddOrReplaceDebtStats(context.Background(), userID, stats)
-		assert.EqualError(t, err, errOldStats.Error())
+		assert.EqualError(t, err, ErrOldStats.Error())
 	})
 }
 

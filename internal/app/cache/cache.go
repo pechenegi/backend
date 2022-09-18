@@ -2,15 +2,10 @@ package cache
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/pechenegi/backend/internal/pkg/models"
-)
-
-var (
-	errOldStats = errors.New("cannot add old stats to cache")
 )
 
 type Cache interface {
@@ -61,7 +56,7 @@ func (c *cache) deleteEntry(ctx context.Context, userID string) {
 func validateStats(ctx context.Context, stats models.DebtStats) error {
 	nowY, nowM, nowD := time.Now().Date()
 	if calcY, calcM, calcD := stats.CalculatedAt.Date(); calcD != nowD || calcM != nowM || calcY != nowY {
-		return errOldStats
+		return ErrOldStats
 	}
 	return nil
 }

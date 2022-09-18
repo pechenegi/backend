@@ -2,16 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 	r "github.com/pechenegi/backend/internal/app/repository"
 	"github.com/pechenegi/backend/internal/pkg/models"
 	"github.com/rs/zerolog"
-)
-
-var (
-	ErrUserExists = errors.New("user with provided login already exists in the system")
 )
 
 type Service interface {

@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	r "github.com/pechenegi/backend/internal/app/repository"
-	"github.com/pechenegi/backend/internal/app/service"
+	s "github.com/pechenegi/backend/internal/app/service"
 	"github.com/pechenegi/backend/internal/pkg/mocks"
 	"github.com/pechenegi/backend/internal/pkg/models"
 	"github.com/rs/zerolog"
@@ -26,7 +26,7 @@ func TestInitHandlers(t *testing.T) {
 	l := createLogger()
 	r, err := r.InitUserRepository(context.Background(), l)
 	require.NoError(t, err)
-	s, err := service.InitService(l, r)
+	s, err := s.InitService(l, r)
 	require.NoError(t, err)
 
 	h, err := InitHandlers(context.Background(), l, r, s)

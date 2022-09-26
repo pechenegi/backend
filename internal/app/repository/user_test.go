@@ -72,7 +72,7 @@ func TestCountUsersByLogin(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("users counted successfully", func(t *testing.T) {
+	t.Run("query error", func(t *testing.T) {
 		repo, mock, err := createRepo()
 		require.NoError(t, err)
 
@@ -97,6 +97,60 @@ func TestCountUsersByLogin(t *testing.T) {
 		ctr, err := repo.CountUsersByLogin(context.Background(), login)
 		assert.Error(t, err)
 		assert.Equal(t, -1, ctr)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestFindUserByLogin(t *testing.T) {
+	login := "testing"
+
+	t.Run("user found successfully", func(t *testing.T) {
+		repo, mock, err := createRepo()
+		require.NoError(t, err)
+
+		mock.ExpectQuery("SELECT id, login, password FROM users WHERE login = (.+);").
+			WithArgs(login).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "login", "password"}).AddRow("1", "testing", "password"))
+
+		user, err := repo.FindUserByLogin(context.Background(), login)
+		assert.NoError(t, err)
+		assert.Equal(
+			t,
+			&models.User{
+				ID:       "1",
+				Login:    "testing",
+				Password: "password",
+			},
+			user,
+		)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("query error", func(t *testing.T) {
+		repo, mock, err := createRepo()
+		require.NoError(t, err)
+
+		mock.ExpectQuery("SELECT id, login, password FROM users WHERE login = (.+);").
+			WithArgs(login).
+			WillReturnError(errors.New("some err"))
+
+		user, err := repo.FindUserByLogin(context.Background(), login)
+		assert.Error(t, err)
+		assert.Nil(t, user)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("scan error", func(t *testing.T) {
+		repo, mock, err := createRepo()
+		require.NoError(t, err)
+
+		mock.ExpectQuery("SELECT id, login, password FROM users WHERE login = (.+);").
+			WithArgs(login).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "login", "password"}).AddRow(nil, "testing", "password"))
+
+		user, err := repo.FindUserByLogin(context.Background(), login)
+		assert.Error(t, err)
+		assert.Nil(t, user)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

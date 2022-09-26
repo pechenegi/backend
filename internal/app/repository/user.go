@@ -11,6 +11,7 @@ import (
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	CountUsersByLogin(ctx context.Context, login string) (int, error)
+	FindUserByLogin(ctx context.Context, login string) (*models.User, error)
 }
 
 type userRepository struct {
@@ -70,4 +71,30 @@ func (r *userRepository) CountUsersByLogin(ctx context.Context, login string) (i
 	r.logger.Debug().Str("login", login).Int("counter", ctr).
 		Msg("users with provided login were successfully counted")
 	return ctr, nil
+}
+
+func (r *userRepository) FindUserByLogin(ctx context.Context, login string) (*models.User, error) {
+	r.logger.Debug().Str("login", login).
+		Msg("searching for user entry with provided login")
+
+	row := r.db.QueryRowContext(
+		ctx,
+		"SELECT id, login, password FROM users WHERE login = $1;",
+		login,
+	)
+	if row.Err() != nil {
+		r.logger.Err(row.Err()).Caller().Str("login", login).
+			Msg("unable to execute select query")
+		return nil, row.Err()
+	}
+	user := new(models.User)
+	if err := row.Scan(&user.ID, &user.Login, &user.Password); err != nil {
+		r.logger.Err(err).Caller().Str("login", login).
+			Msg("unable to scan select query result")
+		return nil, err
+	}
+
+	r.logger.Debug().Str("login", user.Login).Str("id", user.ID).
+		Msg("user with provided login was successfully found")
+	return user, nil
 }

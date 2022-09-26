@@ -21,6 +21,7 @@ var (
 )
 
 type Handlers interface {
+	PostSignIn(w http.ResponseWriter, r *http.Request)
 	PostSignUp(w http.ResponseWriter, r *http.Request)
 	GetUserDebt(w http.ResponseWriter, r *http.Request)
 }
@@ -37,6 +38,44 @@ func InitHandlers(ctx context.Context, logger zerolog.Logger, userRepo r.UserRep
 		userRepo: userRepo,
 		svc:      svc,
 	}, nil
+}
+
+func (h *handlers) PostSignIn(w http.ResponseWriter, r *http.Request) {
+	if r.Body == nil {
+		http.Error(
+			w,
+			"sign in request should have a body",
+			http.StatusBadRequest,
+		)
+		return
+	}
+	body, err := ioReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	user := new(m.User)
+	if err := jsonUnmarshal(body, user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	userID, err := h.svc.SignInUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json, err := jsonMarshal(PostSignResponse{UserID: userID, Err: nil})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(json)
 }
 
 func (h *handlers) PostSignUp(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +106,7 @@ func (h *handlers) PostSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json, err := jsonMarshal(PostSignUpResponse{UserID: userID})
+	json, err := jsonMarshal(PostSignResponse{UserID: userID, Err: nil})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -126,6 +165,7 @@ func getUserDebtFromRepository(ctx context.Context, userID string) (*m.DebtInfo,
 	}
 }
 
-type PostSignUpResponse struct {
+type PostSignResponse struct {
 	UserID string `json:"user_id,omitempty"`
+	Err    error  `json:"error,omitempty"`
 }

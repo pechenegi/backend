@@ -34,6 +34,111 @@ func TestInitHandlers(t *testing.T) {
 	assert.NotNil(t, h)
 }
 
+func TestPostSignIn(t *testing.T) {
+	t.Run("return 200 and new user's id", func(t *testing.T) {
+		h, _, ms := createHandlers(gomock.NewController(t))
+
+		ms.EXPECT().SignInUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("1", nil)
+
+		req, err := createPostSignInRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+		expected := PostSignResponse{UserID: "1", Err: nil}
+
+		h.PostSignIn(res, req)
+		var actual PostSignResponse
+		assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &actual))
+
+		assert.Equal(t, http.StatusOK, res.Result().StatusCode)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("return 400 for nil request body", func(t *testing.T) {
+		h, _, _ := createHandlers(gomock.NewController(t))
+
+		req, err := createPostSignInRequest(false)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		h.PostSignIn(res, req)
+		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
+		assert.Equal(t, "sign in request should have a body\n", res.Body.String())
+	})
+
+	t.Run("return 400 when cannot read body", func(t *testing.T) {
+		h, _, _ := createHandlers(gomock.NewController(t))
+
+		storedReadAll := ioReadAll
+		ioReadAll = fakeReadAll
+		defer restoreReadAll(storedReadAll)
+
+		req, err := createPostSignInRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		h.PostSignIn(res, req)
+		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
+		assert.Equal(t, "ReadAll failed\n", res.Body.String())
+	})
+
+	t.Run("return 400 when cannot unmarshal body", func(t *testing.T) {
+		h, _, _ := createHandlers(gomock.NewController(t))
+
+		storedUnmarshal := jsonUnmarshal
+		jsonUnmarshal = fakeUnmarshal
+		defer restoreUnmarshal(storedUnmarshal)
+
+		req, err := createPostSignInRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		h.PostSignIn(res, req)
+		assert.Equal(t, http.StatusBadRequest, res.Result().StatusCode)
+		assert.Equal(t, "Unmarshalling failed\n", res.Body.String())
+	})
+
+	t.Run("return 500 when service layer fails", func(t *testing.T) {
+		h, _, ms := createHandlers(gomock.NewController(t))
+
+		req, err := createPostSignInRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		ms.EXPECT().SignInUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("", errors.New("some err"))
+
+		h.PostSignIn(res, req)
+		assert.Equal(t, http.StatusInternalServerError, res.Result().StatusCode)
+		assert.Equal(t, "some err\n", res.Body.String())
+	})
+
+	t.Run("return 500 when cannot marshal response", func(t *testing.T) {
+		h, _, ms := createHandlers(gomock.NewController(t))
+
+		storedMarshal := jsonMarshal
+		jsonMarshal = fakeMarshal
+		defer restoreMarshal(storedMarshal)
+
+		req, err := createPostSignInRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		ms.EXPECT().SignInUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("1", nil)
+
+		h.PostSignIn(res, req)
+		assert.Equal(t, http.StatusInternalServerError, res.Result().StatusCode)
+		assert.Equal(t, "Marshalling failed\n", res.Body.String())
+	})
+}
+
 func TestPostSignUp(t *testing.T) {
 	t.Run("return 201 and new user's id", func(t *testing.T) {
 		h, _, ms := createHandlers(gomock.NewController(t))
@@ -46,10 +151,10 @@ func TestPostSignUp(t *testing.T) {
 		req, err := createPostSignUpRequest(true)
 		assert.NoError(t, err)
 		res := httptest.NewRecorder()
-		expected := PostSignUpResponse{UserID: "1"}
+		expected := PostSignResponse{UserID: "1", Err: nil}
 
 		h.PostSignUp(res, req)
-		var actual PostSignUpResponse
+		var actual PostSignResponse
 		assert.NoError(t, json.Unmarshal(res.Body.Bytes(), &actual))
 
 		assert.Equal(t, http.StatusCreated, res.Result().StatusCode)
@@ -207,6 +312,21 @@ func TestGetUserDebt(t *testing.T) {
 		h.GetUserDebt(res, req)
 		assert.Equal(t, http.StatusInternalServerError, res.Result().StatusCode)
 	})
+}
+
+func createPostSignInRequest(hasBody bool) (*http.Request, error) {
+	if hasBody {
+		user := &models.User{
+			Login:    "testing",
+			Password: "something",
+		}
+		json, err := json.Marshal(user)
+		if err != nil {
+			return nil, err
+		}
+		return http.NewRequest(http.MethodPost, "/user/signin", bytes.NewBuffer(json))
+	}
+	return http.NewRequest(http.MethodPost, "/user/signin", nil)
 }
 
 func createPostSignUpRequest(hasBody bool) (*http.Request, error) {

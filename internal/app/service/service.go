@@ -10,6 +10,7 @@ import (
 )
 
 type Service interface {
+	SignInUser(ctx context.Context, user *models.User) (string, error)
 	SignUpUser(ctx context.Context, user *models.User) (string, error)
 }
 
@@ -23,6 +24,27 @@ func InitService(logger zerolog.Logger, userRepo r.UserRepository) (Service, err
 		logger:   logger,
 		userRepo: userRepo,
 	}, nil
+}
+
+func (s *service) SignInUser(ctx context.Context, user *models.User) (string, error) {
+	s.logger.Debug().Str("login", user.Login).
+		Msg("checking if user with provided login exists")
+	dbUser, err := s.userRepo.FindUserByLogin(ctx, user.Login)
+	if err != nil {
+		s.logger.Err(err).Caller().Str("login", user.Login).
+			Msg("unexpected error occured while trying to find user")
+		return "", err
+	}
+
+	s.logger.Debug().Str("login", user.Login).Str("id", user.ID).
+		Msg("comparing provided credentials with repo credentials")
+	if dbUser.Login != user.Login || dbUser.Password != user.Password {
+		s.logger.Warn().Str("login", user.Login).
+			Msg("incorrect credentials were provided")
+		return "", ErrIncorrectCredentials
+	}
+
+	return dbUser.ID, nil
 }
 
 func (s *service) SignUpUser(ctx context.Context, user *models.User) (string, error) {

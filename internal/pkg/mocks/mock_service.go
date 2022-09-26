@@ -35,6 +35,21 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
+// SignInUser mocks base method.
+func (m *MockService) SignInUser(ctx context.Context, user *models.User) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SignInUser", ctx, user)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SignInUser indicates an expected call of SignInUser.
+func (mr *MockServiceMockRecorder) SignInUser(ctx, user interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignInUser", reflect.TypeOf((*MockService)(nil).SignInUser), ctx, user)
+}
+
 // SignUpUser mocks base method.
 func (m *MockService) SignUpUser(ctx context.Context, user *models.User) (string, error) {
 	m.ctrl.T.Helper()

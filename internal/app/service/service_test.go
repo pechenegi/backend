@@ -25,6 +25,66 @@ func TestInitService(t *testing.T) {
 	assert.NotNil(t, svc)
 }
 
+func TestSignInUser(t *testing.T) {
+	user := &models.User{
+		Login:    "testing",
+		Password: "testing",
+	}
+
+	t.Run("successfully sign in new user", func(t *testing.T) {
+		svc, rMock := createService(gomock.NewController(t))
+
+		rMock.EXPECT().FindUserByLogin(
+			context.Background(),
+			gomock.Eq(user.Login),
+		).Times(1).Return(
+			&models.User{
+				ID:       "1",
+				Login:    user.Login,
+				Password: user.Password,
+			},
+			nil,
+		)
+
+		id, err := svc.SignInUser(context.Background(), user)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, id)
+	})
+
+	t.Run("incorrect credentials", func(t *testing.T) {
+		svc, rMock := createService(gomock.NewController(t))
+
+		rMock.EXPECT().FindUserByLogin(
+			context.Background(),
+			gomock.Eq(user.Login),
+		).Times(1).Return(
+			&models.User{
+				ID:       "1",
+				Login:    user.Login,
+				Password: "another",
+			},
+			nil,
+		)
+
+		id, err := svc.SignInUser(context.Background(), user)
+		assert.ErrorIs(t, err, ErrIncorrectCredentials)
+		assert.Empty(t, id)
+	})
+
+	t.Run("error in repo layer", func(t *testing.T) {
+		svc, rMock := createService(gomock.NewController(t))
+
+		rMock.EXPECT().FindUserByLogin(
+			context.Background(),
+			gomock.Eq(user.Login),
+		).Times(1).Return(nil, errors.New("some err"))
+
+		id, err := svc.SignInUser(context.Background(), user)
+		assert.Error(t, err)
+		assert.Empty(t, id)
+	})
+}
+
 func TestSignUpUser(t *testing.T) {
 	user := &models.User{
 		Login:    "testing",

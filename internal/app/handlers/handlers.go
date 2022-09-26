@@ -61,7 +61,11 @@ func (h *handlers) PostSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := createNewUser(r.Context(), user)
+	userID, err := h.svc.SignUpUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	json, err := jsonMarshal(PostSignUpResponse{UserID: userID})
 	if err != nil {
@@ -98,10 +102,6 @@ func (h *handlers) GetUserDebt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(debtJson)
-}
-
-func createNewUser(ctx context.Context, user *m.User) (string, error) {
-	return "1", nil
 }
 
 func getUserIDFromHeader(ctx context.Context, h http.Header) (string, error) {

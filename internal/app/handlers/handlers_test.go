@@ -36,7 +36,12 @@ func TestInitHandlers(t *testing.T) {
 
 func TestPostSignUp(t *testing.T) {
 	t.Run("return 201 and new user's id", func(t *testing.T) {
-		h, _, _ := createHandlers(gomock.NewController(t))
+		h, _, ms := createHandlers(gomock.NewController(t))
+
+		ms.EXPECT().SignUpUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("1", nil)
 
 		req, err := createPostSignUpRequest(true)
 		assert.NoError(t, err)
@@ -95,8 +100,25 @@ func TestPostSignUp(t *testing.T) {
 		assert.Equal(t, "Unmarshalling failed\n", res.Body.String())
 	})
 
+	t.Run("return 500 when service layer fails", func(t *testing.T) {
+		h, _, ms := createHandlers(gomock.NewController(t))
+
+		req, err := createPostSignUpRequest(true)
+		assert.NoError(t, err)
+		res := httptest.NewRecorder()
+
+		ms.EXPECT().SignUpUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("", errors.New("some err"))
+
+		h.PostSignUp(res, req)
+		assert.Equal(t, http.StatusInternalServerError, res.Result().StatusCode)
+		assert.Equal(t, "some err\n", res.Body.String())
+	})
+
 	t.Run("return 500 when cannot marshal response", func(t *testing.T) {
-		h, _, _ := createHandlers(gomock.NewController(t))
+		h, _, ms := createHandlers(gomock.NewController(t))
 
 		storedMarshal := jsonMarshal
 		jsonMarshal = fakeMarshal
@@ -105,6 +127,11 @@ func TestPostSignUp(t *testing.T) {
 		req, err := createPostSignUpRequest(true)
 		assert.NoError(t, err)
 		res := httptest.NewRecorder()
+
+		ms.EXPECT().SignUpUser(
+			context.Background(),
+			gomock.Any(),
+		).Times(1).Return("1", nil)
 
 		h.PostSignUp(res, req)
 		assert.Equal(t, http.StatusInternalServerError, res.Result().StatusCode)
